@@ -1,0 +1,30 @@
+export const pricingPlans = [
+  {
+    name: "Freemium",
+    price: "0 DT",
+    period: "/month",
+    description: "Perfect for casual events and first-time users.",
+    features: ["Public rooms only", "Up to 8 rooms per month", "Invite anyone", "Shared uploads and messages"],
+    ctaLabel: "Start free",
+    plan: "free",
+  },
+  {
+    name: "Premium",
+    price: "12 DT",
+    period: "/month",
+    description: "For hosts who want more control and premium tools.",
+    features: ["Unlimited room creation", "Private and public rooms", "AI assistant access", "Best fit for recurring events"],
+    ctaLabel: "Go premium",
+    plan: "premium",
+    featured: true,
+  },
+  {
+    name: "Photographer",
+    price: "20 DT",
+    period: "/month",
+    description: "Grow your visibility and manage client event rooms.",
+    features: ["7 days free", "Then 3 months at 1 DT", "Marketplace profile", "Premium room features included"],
+    ctaLabel: "Join as photographer",
+    plan: "photographer",
+  },
+];

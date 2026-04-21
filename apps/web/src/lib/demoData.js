@@ -1,0 +1,137 @@
+export const demoWorkspace = {
+  workspaceName: "PixRoom+ Preview",
+  userName: "Demo visitor",
+  stats: [
+    { label: "Active rooms", value: "12", detail: "Weddings, brand events, family galleries" },
+    { label: "Recent uploads", value: "2,846", detail: "Sample photos added this week" },
+    { label: "Pending invites", value: "18", detail: "Guests and collaborators waiting" },
+    { label: "Private rooms", value: "7", detail: "Premium-only room privacy" },
+  ],
+  rooms: [
+    {
+      id: "launch-party",
+      title: "Sofitel Launch Party",
+      description: "Brand event room with live guest uploads and a curated gallery feed.",
+      visibility: "public",
+      code: "PX-8210",
+      participants: 42,
+      uploadsCount: 618,
+      commentsCount: 17,
+      updatedAt: "12 min ago",
+      joined: false,
+      ownerType: "Photographer workspace",
+      privacyLabel: "Public join link",
+      coverGradient: "linear-gradient(135deg,#fbcfe8 0%,#a5f3fc 100%)",
+      uploads: [
+        { id: "lp-1", title: "Stage reveal", author: "Sarah Ben Hassen", gradient: "linear-gradient(135deg,#fde68a 0%,#fca5a5 100%)" },
+        { id: "lp-2", title: "Cocktail crowd", author: "Guest upload", gradient: "linear-gradient(135deg,#bfdbfe 0%,#ddd6fe 100%)" },
+        { id: "lp-3", title: "Product close-up", author: "Studio team", gradient: "linear-gradient(135deg,#a7f3d0 0%,#93c5fd 100%)" },
+      ],
+      comments: [
+        { id: "c1", author: "Nour", message: "Can we pin the stage group shot to the top of the gallery?" },
+        { id: "c2", author: "Photographer ops", message: "VIP portraits are uploaded and ready for review." },
+      ],
+    },
+    {
+      id: "wedding-weekend",
+      title: "Yasmine Wedding Weekend",
+      description: "Private client gallery with guest contributions and staged delivery folders.",
+      visibility: "private",
+      code: "PX-9124",
+      participants: 28,
+      uploadsCount: 392,
+      commentsCount: 9,
+      updatedAt: "45 min ago",
+      joined: true,
+      ownerType: "Client delivery room",
+      privacyLabel: "Private invite-only access",
+      coverGradient: "linear-gradient(135deg,#ddd6fe 0%,#fbcfe8 100%)",
+      uploads: [
+        { id: "ww-1", title: "Ceremony aisle", author: "Omar Mhiri", gradient: "linear-gradient(135deg,#f9a8d4 0%,#fde68a 100%)" },
+        { id: "ww-2", title: "Golden hour portraits", author: "Lead photographer", gradient: "linear-gradient(135deg,#fdba74 0%,#fecdd3 100%)" },
+        { id: "ww-3", title: "Friends table", author: "Guest upload", gradient: "linear-gradient(135deg,#c7d2fe 0%,#a7f3d0 100%)" },
+      ],
+      comments: [
+        { id: "c3", author: "Bride", message: "Please keep this room private until the final selection is ready." },
+        { id: "c4", author: "Editor", message: "Favorites collection is prepared for tomorrow morning." },
+      ],
+    },
+    {
+      id: "summit-vip",
+      title: "Summit VIP Lounge",
+      description: "Invite-only business gallery with branded room controls and fast delivery.",
+      visibility: "private",
+      code: "PX-7743",
+      participants: 67,
+      uploadsCount: 1048,
+      commentsCount: 22,
+      updatedAt: "2h ago",
+      joined: true,
+      ownerType: "Premium room",
+      privacyLabel: "Private with branded access",
+      coverGradient: "linear-gradient(135deg,#93c5fd 0%,#a7f3d0 100%)",
+      uploads: [
+        { id: "sv-1", title: "Speaker panel", author: "Studio team", gradient: "linear-gradient(135deg,#93c5fd 0%,#bfdbfe 100%)" },
+        { id: "sv-2", title: "VIP portraits", author: "Second shooter", gradient: "linear-gradient(135deg,#fbcfe8 0%,#c4b5fd 100%)" },
+        { id: "sv-3", title: "Reception lounge", author: "Guest upload", gradient: "linear-gradient(135deg,#a5f3fc 0%,#bfdbfe 100%)" },
+      ],
+      comments: [
+        { id: "c5", author: "Account manager", message: "Private access link sent to all VIP participants." },
+        { id: "c6", author: "Marketing lead", message: "Need a folder for keynote portraits only." },
+      ],
+    },
+  ],
+  invitations: [
+    { id: "i1", name: "Mouna Trabelsi", room: "Yasmine Wedding Weekend", role: "Client", status: "Awaiting response" },
+    { id: "i2", name: "Rania Gharbi", room: "Sofitel Launch Party", role: "Guest uploader", status: "Accepted" },
+    { id: "i3", name: "Omar Mhiri", room: "Summit VIP Lounge", role: "Photographer", status: "Needs resend" },
+  ],
+  joinedRooms: [
+    { id: "j1", title: "Yasmine Wedding Weekend", access: "Private guest access", activity: "9 new uploads since yesterday" },
+    { id: "j2", title: "Summit VIP Lounge", access: "Client review access", activity: "Keynote folder updated 2h ago" },
+  ],
+  activities: [
+    { id: "a1", title: "Guest uploads enabled", detail: "Sofitel Launch Party now accepts mobile uploads from all invitees.", time: "15 min ago" },
+    { id: "a2", title: "Private gallery shared", detail: "Yasmine Wedding client received a curated preview link.", time: "43 min ago" },
+    { id: "a3", title: "Room privacy updated", detail: "Summit VIP Lounge changed from public to invite-only.", time: "2h ago" },
+    { id: "a4", title: "Photographer invited", detail: "A second shooter was added with upload and organization access.", time: "3h ago" },
+  ],
+  plans: [
+    {
+      name: "Starter",
+      price: "0 DT",
+      description: "Perfect for trying the room experience with public galleries.",
+      features: ["Public rooms", "Shared guest uploads", "Core invitations", "Basic gallery browsing"],
+      cta: "Start free",
+    },
+    {
+      name: "Premium",
+      price: "12 DT",
+      description: "Private rooms, stronger access control, and premium collaboration tools.",
+      features: ["Private rooms", "Premium room controls", "AI assistant access", "Higher storage"],
+      cta: "Unlock full access",
+    },
+    {
+      name: "Photographer Pro",
+      price: "20 DT",
+      description: "Client delivery workflows, branded galleries, and pro room management.",
+      features: ["Photographer tools", "Client-ready delivery", "Marketplace profile", "Advanced sharing"],
+      cta: "Create photographer account",
+    },
+  ],
+  photographerTools: [
+    { title: "Client delivery rooms", detail: "Send polished private galleries with branded preview access." },
+    { title: "Collection management", detail: "Organize uploads into highlight folders and delivery sets." },
+    { title: "Invite clients and second shooters", detail: "Assign the right access to the right people in seconds." },
+    { title: "Marketplace visibility", detail: "Present your specialties and contact details to future clients." },
+  ],
+  normalUserTools: [
+    { title: "Join rooms", detail: "Enter with an invitation link or room code." },
+    { title: "Upload where allowed", detail: "Contribute memories when guest uploads are enabled." },
+    { title: "Track invitations", detail: "See which rooms you joined and what changed recently." },
+  ],
+};
+
+export function getDemoRoom(roomId) {
+  return demoWorkspace.rooms.find((room) => room.id === roomId) || demoWorkspace.rooms[0];
+}
