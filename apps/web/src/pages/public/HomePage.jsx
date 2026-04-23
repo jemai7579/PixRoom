@@ -98,60 +98,8 @@ const reassurance = [
   "A cleaner way to invite, upload, and relive the event",
 ];
 
-function FooterLink({ href, label, to }) {
-  if (href) {
-    return (
-      <a className="text-sm text-slate-500 transition hover:text-slate-900" href={href}>
-        {label}
-      </a>
-    );
-  }
-
-  return (
-    <Link className="text-sm text-slate-500 transition hover:text-slate-900" to={to}>
-      {label}
-    </Link>
-  );
-}
-
 export function HomePage() {
   const { isAuthenticated } = useAuth();
-  const footerColumns = [
-    {
-      title: "Product",
-      links: [
-        { label: "Features", href: "#features" },
-        { label: "For photographers", href: "#photographers" },
-        { label: "Pricing", href: "#pricing" },
-        { label: "Explore demo", to: "/demo" },
-      ],
-    },
-    {
-      title: "Get started",
-      links: [
-        { label: "Create account", to: "/register" },
-        { label: "Log in", to: "/login" },
-        { label: isAuthenticated ? "Go to dashboard" : "Log in to dashboard", to: isAuthenticated ? "/app/dashboard" : "/login" },
-      ],
-    },
-    {
-      title: "Explore",
-      links: [
-        { label: "Demo preview", to: "/demo" },
-        { label: "Find photographers", href: "#photographers" },
-        { label: "Pricing plans", href: "#pricing" },
-      ],
-    },
-    {
-      title: "Support",
-      links: [
-        { label: "Create account", to: "/register" },
-        { label: "Log in", to: "/login" },
-        { label: "Home", to: "/" },
-      ],
-    },
-  ];
-
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(251,146,60,0.12),transparent_18%),radial-gradient(circle_at_top_right,rgba(45,212,191,0.11),transparent_20%),linear-gradient(180deg,#fffaf6_0%,#f6fbff_48%,#fffdfb_100%)] text-slate-900">
       <header className="sticky top-0 z-30 border-b border-white/70 bg-white/82 backdrop-blur-xl">
@@ -372,7 +320,7 @@ export function HomePage() {
 
         <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8" id="photographers">
           <div className="grid gap-6 rounded-[36px] border border-white/80 bg-[linear-gradient(145deg,#fff8f1_0%,#f3fbff_100%)] p-6 shadow-[0_24px_60px_rgba(15,23,42,0.06)] lg:grid-cols-[1fr_1fr] lg:items-center lg:p-8">
-            <div>
+            <>
               <span className="inline-flex rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-700">
                 For photographers
               </span>
@@ -405,7 +353,7 @@ export function HomePage() {
                   Explore demo
                 </Link>
               </div>
-            </div>
+            </>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded-[28px] border border-white/80 bg-white/88 p-5 shadow-[0_18px_40px_rgba(15,23,42,0.05)]">
@@ -551,48 +499,35 @@ export function HomePage() {
         </section>
       </main>
 
-      <footer className="border-t border-white/70 bg-[#f7fbff]">
-        <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-          <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
-            <div>
-              <PixroomLogo
-                className="max-w-[160px]"
-                imageClassName="max-w-[124px]"
-                subtitle="Shared memories, premium room experiences"
-                to="/"
-              />
+      <footer className="border-t border-white/70 bg-white/82 backdrop-blur-xl">
+        <div className="mx-auto flex min-h-[58px] max-w-7xl flex-wrap items-center justify-center gap-x-4 gap-y-2 px-4 py-3 text-sm text-slate-500 sm:justify-between sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3">
+            <PixroomLogo
+              className="max-w-[118px]"
+              imageClassName="max-w-[34px]"
+              subtitle=""
+              to="/"
+            />
+            <span className="font-medium text-slate-600">PixRoom+ &copy; 2026</span>
 
-              <p className="mt-5 max-w-md text-sm leading-7 text-slate-500">
-                A modern product for shared photo rooms, invitations, private galleries, and photographer-friendly delivery.
-              </p>
-
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Link className={primaryButtonClass} to={isAuthenticated ? "/app/dashboard" : "/register"}>
-                  {isAuthenticated ? "Go to dashboard" : "Create account"}
-                </Link>
-                <Link className={secondaryButtonClass} to="/demo">
-                  Explore demo
-                </Link>
-              </div>
-            </div>
-
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-              {footerColumns.map((column) => (
-                <div key={column.title}>
-                  <p className="text-sm font-semibold text-slate-950">{column.title}</p>
-                  <div className="mt-4 grid gap-3">
-                    {column.links.map((item) => (
-                      <FooterLink key={item.label} {...item} />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
 
-          <div className="mt-12 flex flex-col gap-3 border-t border-slate-200 pt-6 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-            <p>© 2026 PixRoom+. Built for photo rooms, shared memories, and event galleries.</p>
-            <p>Read-only demo available before signup.</p>
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
+            <a className="transition hover:text-slate-950" href="mailto:contact@pixroom.plus">
+              Contact
+            </a>
+            <span className="text-slate-300">|</span>
+            <a className="transition hover:text-slate-950" href="https://facebook.com" rel="noreferrer" target="_blank">
+              Facebook
+            </a>
+            <span className="text-slate-300">|</span>
+            <a className="transition hover:text-slate-950" href="https://instagram.com" rel="noreferrer" target="_blank">
+              Instagram
+            </a>
+            <span className="text-slate-300">|</span>
+            <a className="transition hover:text-slate-950" href="https://linkedin.com" rel="noreferrer" target="_blank">
+              LinkedIn
+            </a>
           </div>
         </div>
       </footer>

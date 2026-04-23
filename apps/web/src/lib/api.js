@@ -141,6 +141,13 @@ export const api = {
         body: { inviteeId },
       });
     },
+    invitePhotographer(token, roomId, photographerId) {
+      return request(`/rooms/${roomId}/invite-photographer`, {
+        method: "POST",
+        token,
+        body: { photographerId },
+      });
+    },
     acceptInvitation(token, invitationId) {
       return request(`/rooms/invitations/${invitationId}/accept`, { method: "POST", token });
     },
@@ -269,9 +276,23 @@ export const api = {
       });
     },
   },
+  photographer: {
+    listInvitations(token) {
+      return request("/photographer/invitations", { token });
+    },
+  },
+  invitations: {
+    accept(token, invitationId) {
+      return request(`/invitations/${invitationId}/accept`, { method: "POST", token });
+    },
+    reject(token, invitationId) {
+      return request(`/invitations/${invitationId}/reject`, { method: "POST", token });
+    },
+  },
   assistant: {
-    chat(token, message) {
-      return request("/assistant/chat", { method: "POST", token, body: { message } });
+    chat(token, payload) {
+      const body = typeof payload === "string" ? { message: payload } : payload;
+      return request("/assistant/chat", { method: "POST", token, body });
     },
   },
 };

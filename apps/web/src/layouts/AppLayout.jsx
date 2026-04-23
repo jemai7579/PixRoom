@@ -5,6 +5,7 @@ import { AssistantDrawer } from "../components/AssistantDrawer";
 import { Sidebar } from "../components/Sidebar";
 import { useAuth } from "../hooks/useAuth";
 import { api } from "../lib/api";
+import { buildAssistantPayload, getAssistantSuggestions } from "../lib/assistantContext";
 import { buildAppUser } from "../lib/mockAppData";
 
 const ASSISTANT_STORAGE_KEY = "pixroom-assistant-thread";
@@ -37,41 +38,41 @@ function getPageMeta(pathname, appUser) {
       title: appUser.role === "photographer" ? "Photographer home" : "Home",
       description:
         appUser.role === "photographer"
-          ? "See new requests, open client rooms, and upload finished photos."
-          : "Create a room, invite people, and keep all your event photos together.",
+          ? "Accept invites, open rooms, and share photos."
+          : "Create a room and collect event photos in one place.",
     },
     {
       match: ["/app/rooms/new"],
       title: "Create your room",
-      description: "Give your event a name, choose the privacy, and start sharing in a minute.",
+      description: "Name the event, choose privacy, and start sharing.",
     },
     {
       match: ["/app/rooms/"],
       title: "Room",
-      description: "Invite people, upload photos, and keep the gallery easy to follow.",
+      description: "Invite people, upload photos, and download the gallery.",
     },
     {
       match: ["/app/rooms", "/app/client-rooms"],
       title: appUser.role === "photographer" ? "Client rooms" : "My rooms",
       description:
         appUser.role === "photographer"
-          ? "Open a client room to share finished photos and follow each event."
-          : "Open any room to invite people, upload photos, or see the gallery.",
+          ? "Open a room to upload and share event photos."
+          : "Open a room to invite guests, upload photos, or download images.",
     },
     {
       match: ["/app/friends"],
-      title: "Friends and invites",
-      description: "Find people, accept requests, and make room invites faster.",
+      title: "Invitations",
+      description: "Find people and prepare guest invitations.",
     },
     {
       match: ["/app/photographers", "/app/marketplace"],
-      title: "Find a photographer",
-      description: "Browse simple photographer cards, save favorites, and send a request when ready.",
+      title: "Photographers",
+      description: "Find a photographer and invite them to your room.",
     },
     {
       match: ["/app/requests"],
       title: "Requests",
-      description: "Review new event requests and reply without extra steps.",
+      description: "Review event requests and respond quickly.",
     },
     {
       match: ["/app/portfolio"],
@@ -90,8 +91,8 @@ function getPageMeta(pathname, appUser) {
     },
     {
       match: ["/app/settings", "/app/profile", "/app/billing"],
-      title: "Settings",
-      description: "Update your account, preferences, and plan details.",
+      title: "Profile",
+      description: "Update your account and plan.",
     },
   ];
 
@@ -116,14 +117,38 @@ export function AppLayout() {
   const appUser = buildAppUser(user);
 
   const pageMeta = useMemo(() => getPageMeta(location.pathname, appUser), [appUser, location.pathname]);
+  const suggestedPrompts = useMemo(
+    () => getAssistantSuggestions(location.pathname, appUser.role),
+    [appUser.role, location.pathname],
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
 
+    if (!assistantMessages.length) {
+      window.localStorage.removeItem(ASSISTANT_STORAGE_KEY);
+      window.sessionStorage.removeItem(ASSISTANT_STORAGE_KEY);
+      return;
+    }
+
     window.localStorage.setItem(ASSISTANT_STORAGE_KEY, JSON.stringify(assistantMessages));
   }, [assistantMessages]);
+
+  function clearAssistantConversation() {
+    const shouldClear = window.confirm("Clear this AI conversation?");
+
+    if (!shouldClear) {
+      return;
+    }
+
+    setAssistantMessages([]);
+    setAssistantError("");
+    setAssistantInput("");
+    window.localStorage.removeItem(ASSISTANT_STORAGE_KEY);
+    window.sessionStorage.removeItem(ASSISTANT_STORAGE_KEY);
+  }
 
   useEffect(() => {
     if (location.state?.assistantOpen) {
@@ -167,7 +192,14 @@ export function AppLayout() {
 
     try {
       setIsAssistantSending(true);
-      const data = await api.assistant.chat(token, nextMessage);
+      const data = await api.assistant.chat(
+        token,
+        buildAssistantPayload(nextMessage, {
+          appUser,
+          currentPage: window.location.pathname,
+          user,
+        }),
+      );
       setAssistantMessages((current) => [...current, createMessage("assistant", data.reply)]);
     } catch (chatError) {
       setAssistantError(chatError.message);
@@ -256,12 +288,14 @@ export function AppLayout() {
           isSending={isAssistantSending}
           messages={assistantMessages}
           onClose={() => setIsAssistantOpen(false)}
+          onClearConversation={clearAssistantConversation}
           onInputChange={setAssistantInput}
           onPromptSelect={(prompt) => {
             setAssistantInput(prompt);
             setIsAssistantOpen(true);
           }}
           onSubmit={handleAssistantSubmit}
+          suggestedPrompts={suggestedPrompts}
         />
       </div>
     </div>

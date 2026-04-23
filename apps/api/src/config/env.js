@@ -1,6 +1,15 @@
 import dotenv from "dotenv";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-dotenv.config();
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
+const apiRootEnvPath = path.resolve(currentDir, "../../.env");
+
+dotenv.config({ path: apiRootEnvPath });
+
+if ((process.env.NODE_ENV || "development") === "development") {
+  console.log("OpenAI key loaded:", Boolean(process.env.OPENAI_API_KEY));
+}
 
 export const env = {
   nodeEnv: process.env.NODE_ENV || "development",

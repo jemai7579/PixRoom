@@ -95,6 +95,7 @@ export function RoomDetailsPage() {
   const [room, setRoom] = useState(null);
   const [roomInvitations, setRoomInvitations] = useState([]);
   const [friends, setFriends] = useState([]);
+  const [photographers, setPhotographers] = useState([]);
   const [message, setMessage] = useState("");
   const [comment, setComment] = useState("");
   const [file, setFile] = useState(null);
@@ -104,6 +105,7 @@ export function RoomDetailsPage() {
   const [isSending, setIsSending] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteActionId, setInviteActionId] = useState("");
+  const [photographerInviteActionId, setPhotographerInviteActionId] = useState("");
   const [selectedPhotoIds, setSelectedPhotoIds] = useState([]);
   const [previewPhotoId, setPreviewPhotoId] = useState("");
   const [downloadError, setDownloadError] = useState("");
@@ -121,13 +123,15 @@ export function RoomDetailsPage() {
   }
 
   async function loadInvitationTools() {
-    const [friendData, invitationData] = await Promise.all([
+    const [friendData, invitationData, photographerData] = await Promise.all([
       api.social.overview(token),
       api.rooms.listRoomInvitations(token, roomId),
+      api.marketplace.listPhotographers(token, { availability: "available" }),
     ]);
 
     setFriends(friendData.friends);
     setRoomInvitations(invitationData.invitations);
+    setPhotographers(photographerData.photographers);
   }
 
   async function refreshRoom() {
@@ -153,14 +157,16 @@ export function RoomDetailsPage() {
         setRoom(nextRoom.room);
 
         if (nextRoom.room.canManageInvitations) {
-          const [friendData, invitationData] = await Promise.all([
+          const [friendData, invitationData, photographerData] = await Promise.all([
             api.social.overview(token),
             api.rooms.listRoomInvitations(token, roomId),
+            api.marketplace.listPhotographers(token, { availability: "available" }),
           ]);
 
           if (!ignore) {
             setFriends(friendData.friends);
             setRoomInvitations(invitationData.invitations);
+            setPhotographers(photographerData.photographers);
           }
         }
       } catch (loadError) {
@@ -248,6 +254,21 @@ export function RoomDetailsPage() {
       setInviteError(inviteActionError.message);
     } finally {
       setInviteActionId("");
+    }
+  }
+
+  async function handleInvitePhotographer(photographerId) {
+    try {
+      setPhotographerInviteActionId(photographerId);
+      setInviteError("");
+      setMessage("");
+      await api.rooms.invitePhotographer(token, roomId, photographerId);
+      setMessage("Invitation sent successfully");
+      await loadInvitationTools();
+    } catch (inviteActionError) {
+      setInviteError(inviteActionError.message);
+    } finally {
+      setPhotographerInviteActionId("");
     }
   }
 
@@ -411,6 +432,12 @@ export function RoomDetailsPage() {
 
   const pendingInvitations = roomInvitations.filter((invitation) => invitation.status === "pending");
   const acceptedInvitations = roomInvitations.filter((invitation) => invitation.status === "accepted");
+  const photographerInvitations = roomInvitations.filter(
+    (invitation) => invitation.invitee?.role === "photographer",
+  );
+  const photographerInvitationById = new Map(
+    photographerInvitations.map((invitation) => [invitation.invitee?.id, invitation]),
+  );
 
   return (
     <>
@@ -638,7 +665,7 @@ export function RoomDetailsPage() {
           </div>
         </section>
 
-        {(message || error || downloadError) && (
+        {(message || error || inviteError || downloadError) && (
           <div className="space-y-3">
             {message ? (
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
@@ -648,6 +675,11 @@ export function RoomDetailsPage() {
             {error ? (
               <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                 {error}
+              </div>
+            ) : null}
+            {inviteError ? (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {inviteError}
               </div>
             ) : null}
             {downloadError ? (
@@ -932,20 +964,50 @@ export function RoomDetailsPage() {
                   <Camera className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-slate-950">Photographer</h3>
-                  <p className="text-sm text-slate-500">Add a photographer if you want final edited photos in this room.</p>
+                  <h3 className="text-xl font-semibold text-slate-950">Invite Photographer</h3>
+                  <p className="text-sm text-slate-500">Invite a photographer to join this room after they accept.</p>
                 </div>
               </div>
 
-              <div className="mt-5 rounded-[24px] border border-slate-200 bg-white px-4 py-4">
-                <p className="font-medium text-slate-900">No photographer selected yet</p>
-                <p className="mt-2 text-sm leading-6 text-slate-500">
-                  Browse photographers, save the ones you like, and send a request when you are ready.
-                </p>
-                <Link className="app-btn-primary mt-4 inline-flex h-11 items-center justify-center gap-2 px-4 text-sm" to="/app/photographers">
-                  <Search className="h-4 w-4" />
-                  Choose photographer
-                </Link>
+              <div className="mt-5 space-y-3">
+                {photographers.length ? (
+                  photographers.slice(0, 5).map((photographer) => {
+                    const invitation = photographerInvitationById.get(photographer.id);
+                    const isBusy = photographerInviteActionId === photographer.id;
+                    const hasFinalStatus = ["accepted", "rejected"].includes(invitation?.status);
+
+                    return (
+                      <article
+                        key={photographer.id}
+                        className="rounded-[24px] border border-slate-200 bg-white px-4 py-4"
+                      >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="font-medium text-slate-900">{photographer.name}</p>
+                            <p className="mt-1 text-sm text-slate-500">
+                              {photographer.location || photographer.email}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {invitation ? <StatusBadge status={invitation.status} /> : null}
+                            <button
+                              className="app-btn-primary inline-flex h-10 items-center justify-center px-4 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                              disabled={isBusy || invitation?.status === "pending" || invitation?.status === "accepted"}
+                              onClick={() => handleInvitePhotographer(photographer.id)}
+                              type="button"
+                            >
+                              {isBusy ? "Sending..." : hasFinalStatus ? "Invite again" : "Invite"}
+                            </button>
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })
+                ) : (
+                  <div className="rounded-[24px] border border-dashed border-slate-200 bg-white px-4 py-6 text-sm text-slate-500">
+                    No available photographers found.
+                  </div>
+                )}
               </div>
             </section>
           </div>

@@ -1,17 +1,22 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { StatusBanner } from "../../components/StatusBanner";
 import { useAuth } from "../../hooks/useAuth";
 import { api } from "../../lib/api";
+import { buildAssistantPayload, getAssistantSuggestions } from "../../lib/assistantContext";
+import { buildAppUser } from "../../lib/mockAppData";
 
 export function AssistantPage() {
   const { token, user } = useAuth();
+  const location = useLocation();
   const [message, setMessage] = useState("");
   const [reply, setReply] = useState("");
   const [error, setError] = useState("");
   const [isSending, setIsSending] = useState(false);
 
+  const appUser = buildAppUser(user);
   const canUseAssistant = user.features?.canUseAssistant;
+  const suggestedPrompts = getAssistantSuggestions(location.pathname, appUser.role);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -25,7 +30,14 @@ export function AssistantPage() {
 
     try {
       setIsSending(true);
-      const data = await api.assistant.chat(token, message);
+      const data = await api.assistant.chat(
+        token,
+        buildAssistantPayload(message, {
+          appUser,
+          currentPage: window.location.pathname,
+          user,
+        }),
+      );
       setReply(data.reply);
     } catch (chatError) {
       setError(chatError.message);
@@ -53,6 +65,19 @@ export function AssistantPage() {
         <section className="panel page-panel">
           <StatusBanner type="error">{error}</StatusBanner>
           <StatusBanner type="success">{reply}</StatusBanner>
+
+          <div className="quick-actions">
+            {suggestedPrompts.map((prompt) => (
+              <button
+                className="button button--ghost"
+                key={prompt}
+                onClick={() => setMessage(prompt)}
+                type="button"
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
 
           <form className="form-grid" onSubmit={handleSubmit}>
             <label className="field field--full">

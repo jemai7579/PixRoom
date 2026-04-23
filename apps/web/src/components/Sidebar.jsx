@@ -1,5 +1,5 @@
 import {
-  CalendarClock,
+  Bot,
   Camera,
   Home,
   Images,
@@ -14,28 +14,32 @@ import { UserCard } from "./UserCard";
 
 const memberNavigation = [
   { label: "Home", to: "/app/dashboard", icon: Home },
-  { label: "My rooms", to: "/app/rooms", icon: Images },
-  { label: "Create room", to: "/app/rooms/new", icon: Camera },
-  { label: "Friends", to: "/app/friends", icon: Users },
-  { label: "Find photographer", to: "/app/photographers", icon: UserRoundPlus },
-  { label: "Settings", to: "/app/settings", icon: Settings },
+  { label: "Create Room", to: "/app/rooms/new", icon: Camera },
+  { label: "My Rooms", to: "/app/rooms", icon: Images },
+  { label: "Photographers", to: "/app/photographers", icon: UserRoundPlus },
+  { label: "Invitations", to: "/app/dashboard#invitations", icon: Users },
+  { label: "AI Assistant", to: "/app/assistant", icon: Bot },
+  { label: "Profile", to: "/app/settings", icon: Settings },
 ];
 
 const photographerNavigation = [
   { label: "Home", to: "/app/dashboard", icon: Home },
-  { label: "Requests", to: "/app/requests", icon: UserRoundPlus },
-  { label: "Client rooms", to: "/app/client-rooms", icon: Images },
-  { label: "Portfolio", to: "/app/portfolio", icon: Camera },
-  { label: "Availability", to: "/app/availability", icon: CalendarClock },
-  { label: "Settings", to: "/app/settings", icon: Settings },
+  { label: "Create Room", to: "/app/rooms/new", icon: Camera },
+  { label: "My Rooms", to: "/app/client-rooms", icon: Images },
+  { label: "Photographers", to: "/app/photographers", icon: UserRoundPlus },
+  { label: "Invitations", to: "/app/dashboard#invitations", icon: Users },
+  { label: "AI Assistant", to: "/app/assistant", icon: Bot },
+  { label: "Profile", to: "/app/settings", icon: Settings },
 ];
 
 function isActivePath(pathname, to) {
-  if (to === "/app/dashboard") {
-    return pathname === to;
+  const targetPath = to.split("#")[0];
+
+  if (targetPath === "/app/dashboard") {
+    return pathname === targetPath;
   }
 
-  return pathname === to || pathname.startsWith(`${to}/`);
+  return pathname === targetPath || pathname.startsWith(`${targetPath}/`);
 }
 
 export function Sidebar({ isOpen, onClose, onLogout, user }) {
@@ -43,8 +47,8 @@ export function Sidebar({ isOpen, onClose, onLogout, user }) {
   const navigation = user.role === "photographer" ? photographerNavigation : memberNavigation;
   const helperCopy =
     user.role === "photographer"
-      ? "Keep requests, client rooms, portfolio, and finished photos close."
-      : "Create a room, invite your people, and share photos without the clutter.";
+      ? "Accept room invites, upload photos, and keep your work organized."
+      : "Create a room, invite guests, and collect event photos in one place.";
 
   return (
     <aside
@@ -53,14 +57,22 @@ export function Sidebar({ isOpen, onClose, onLogout, user }) {
         isOpen ? "translate-x-0" : "-translate-x-full",
       ].join(" ")}
     >
-      <div className="flex shrink-0 items-center justify-between gap-3">
-        <PixroomLogo
-          className="max-w-[118px]"
-          imageClassName="max-w-[94px]"
-          onClick={onClose}
-          subtitle={user.role === "photographer" ? "Photographer tools" : "Share memories together"}
-          to="/"
-        />
+      <div className="flex shrink-0 items-center justify-between gap-3 py-1">
+        <div className="flex min-w-0 items-center gap-3">
+          <PixroomLogo
+            className="max-w-[46px]"
+            imageClassName="max-w-[44px]"
+            onClick={onClose}
+            subtitle=""
+            to="/"
+          />
+          <div className="min-w-0">
+            <p className="truncate text-base font-semibold tracking-tight text-slate-950">PixRoom+</p>
+            <p className="truncate text-xs text-slate-500">
+              {user.role === "photographer" ? "Photographer" : "Event rooms"}
+            </p>
+          </div>
+        </div>
 
         <button
           aria-label="Close navigation"
@@ -72,7 +84,7 @@ export function Sidebar({ isOpen, onClose, onLogout, user }) {
         </button>
       </div>
 
-      <div className="mt-4 flex-1 overflow-y-auto pr-1">
+      <div className="mt-3 flex-1 overflow-y-auto pr-1">
         <div className="rounded-[28px] border border-white/80 bg-white/82 p-4 shadow-[0_18px_45px_rgba(15,23,42,0.05)]">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Go to</p>
           <nav className="mt-3 space-y-1.5">
@@ -110,7 +122,7 @@ export function Sidebar({ isOpen, onClose, onLogout, user }) {
         </div>
 
         <div className="mt-5 rounded-[28px] border border-emerald-100 bg-[linear-gradient(180deg,#f3fbf8_0%,#fffdf9_100%)] p-4.5 shadow-[0_14px_35px_rgba(15,23,42,0.04)]">
-          <p className="text-sm font-semibold text-slate-900">Start simple</p>
+          <p className="text-sm font-semibold text-slate-900">Simple flow</p>
           <p className="mt-1.5 text-sm leading-6 text-slate-500">{helperCopy}</p>
         </div>
       </div>

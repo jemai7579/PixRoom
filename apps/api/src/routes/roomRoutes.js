@@ -12,6 +12,7 @@ import {
   getRoomInvitations,
   getRoom,
   inviteFriendToRoom,
+  invitePhotographerToRoom,
   joinRoomByCode,
   listRooms,
   rejectRoomInvitation,
@@ -41,6 +42,7 @@ router.post("/invitations/:invitationId/accept", acceptRoomInvitation);
 router.post("/invitations/:invitationId/reject", rejectRoomInvitation);
 router.get("/photos/:photoId/download", downloadPhoto);
 router.post("/:roomId/invitations", inviteFriendToRoom);
+router.post("/:roomId/invite-photographer", invitePhotographerToRoom);
 router.get("/:roomId/invitations", getRoomInvitations);
 router.get("/:roomId/download", downloadRoomPhotos);
 router.get("/:roomId", getRoom);

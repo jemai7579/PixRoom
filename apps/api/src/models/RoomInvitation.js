@@ -22,6 +22,10 @@ const roomInvitationSchema = new mongoose.Schema(
       enum: ["pending", "accepted", "rejected"],
       default: "pending",
     },
+    respondedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

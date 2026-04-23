@@ -1,50 +1,92 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  ArrowRight,
+  Bot,
   Camera,
-  CheckCircle2,
-  ImagePlus,
-  Search,
-  UploadCloud,
-  UserPlus,
+  Download,
+  Images,
+  ImageUp,
+  MailPlus,
+  Plus,
+  UserRoundPlus,
   Users,
 } from "lucide-react";
 import { StatusBadge } from "../../components/StatusBadge";
 import { useAuth } from "../../hooks/useAuth";
 import { api } from "../../lib/api";
 import { buildAppUser, buildDashboardData } from "../../lib/mockAppData";
-import { PhotographerDashboardPage } from "./PhotographerDashboardPage";
 
-function ActionCard({ description, icon: Icon, title, to }) {
+function QuickAction({ description, icon: Icon, label, state, to }) {
   return (
     <Link
-      className="group rounded-[30px] border border-white/80 bg-white/88 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.05)] transition hover:-translate-y-1 hover:border-orange-200 hover:shadow-[0_22px_50px_rgba(15,23,42,0.08)]"
+      className="group rounded-[24px] border border-white/80 bg-white/90 p-5 shadow-[0_14px_35px_rgba(15,23,42,0.05)] transition hover:-translate-y-1 hover:border-orange-200 hover:shadow-[0_20px_45px_rgba(15,23,42,0.08)]"
+      state={state}
       to={to}
     >
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#fff7ed_0%,#ecfeff_100%)] text-slate-900">
-        <Icon className="h-5 w-5" />
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#fff7ed_0%,#ecfeff_100%)] text-slate-900">
+          <Icon className="h-5 w-5" />
+        </div>
+        <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-50 text-slate-500 transition group-hover:bg-orange-50 group-hover:text-orange-700">
+          <Plus className="h-4 w-4" />
+        </span>
       </div>
-      <h3 className="mt-5 text-lg font-semibold text-slate-950">{title}</h3>
+      <h3 className="mt-5 text-lg font-semibold text-slate-950">{label}</h3>
       <p className="mt-2 text-sm leading-6 text-slate-500">{description}</p>
-      <div className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-900 transition group-hover:text-orange-700">
-        Open
-        <ArrowRight className="h-4 w-4" />
-      </div>
     </Link>
   );
 }
 
-function StepCard({ description, number, title }) {
+function TrackingCard({ icon: Icon, label, value }) {
   return (
-    <article className="rounded-[28px] border border-white/80 bg-white/82 p-5 shadow-[0_14px_35px_rgba(15,23,42,0.05)]">
-      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50 text-sm font-semibold text-orange-700">
-        {number}
+    <article className="rounded-[24px] border border-white/80 bg-white/90 p-5 shadow-[0_14px_35px_rgba(15,23,42,0.05)]">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{label}</p>
+          <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{value}</p>
+        </div>
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-slate-700">
+          <Icon className="h-5 w-5" />
+        </div>
       </div>
-      <h3 className="mt-4 text-lg font-semibold text-slate-950">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-slate-500">{description}</p>
     </article>
   );
+}
+
+function ActivityItem({ label, value }) {
+  return (
+    <div className="flex flex-col gap-1 rounded-[22px] border border-slate-200 bg-slate-50/80 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm font-medium text-slate-600">{label}</p>
+      <p className="text-sm font-semibold text-slate-950">{value}</p>
+    </div>
+  );
+}
+
+function countAcceptedPhotographers(invitations) {
+  return (invitations.history || []).filter(
+    (invitation) =>
+      invitation.status === "accepted" && invitation.invitee?.role === "photographer",
+  ).length;
+}
+
+function getLatestPhotoLabel(rawRooms) {
+  const uploads = (rawRooms || [])
+    .flatMap((room) =>
+      (room.uploads || []).map((upload) => ({
+        ...upload,
+        roomName: room.title || room.name,
+      })),
+    )
+    .filter(Boolean)
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+  const latest = uploads[0];
+
+  if (!latest) {
+    return "No photos yet";
+  }
+
+  return latest.roomName ? `${latest.originalName || "Photo"} in ${latest.roomName}` : latest.originalName || "Photo uploaded";
 }
 
 export function DashboardPage() {
@@ -52,19 +94,17 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const appUser = useMemo(() => buildAppUser(user), [user]);
   const [dashboard, setDashboard] = useState(() => buildDashboardData(appUser));
-  const [joinCode, setJoinCode] = useState("");
-  const [joinError, setJoinError] = useState("");
-  const [isJoining, setIsJoining] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [dataMode, setDataMode] = useState("live");
+  const [rawRooms, setRawRooms] = useState([]);
   const [roomInvitations, setRoomInvitations] = useState({
     pendingReceived: [],
     pendingSent: [],
     history: [],
   });
-  const [invitationMessage, setInvitationMessage] = useState("");
-  const [invitationError, setInvitationError] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
   const [activeInvitationId, setActiveInvitationId] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [dataMode, setDataMode] = useState("live");
 
   useEffect(() => {
     let ignore = false;
@@ -78,12 +118,14 @@ export function DashboardPage() {
 
         if (!ignore) {
           setDashboard(buildDashboardData(appUser, data));
+          setRawRooms(data.rooms || []);
           setRoomInvitations(invitations);
           setDataMode("live");
         }
       } catch {
         if (!ignore) {
           setDashboard(buildDashboardData(appUser));
+          setRawRooms([]);
           setRoomInvitations({ pendingReceived: [], pendingSent: [], history: [] });
           setDataMode("mock");
         }
@@ -101,342 +143,227 @@ export function DashboardPage() {
     };
   }, [appUser, token]);
 
-  async function handleJoinRoom(event) {
-    event.preventDefault();
-    setJoinError("");
-
-    if (!joinCode.trim()) {
-      setJoinError("Enter a room code first.");
-      return;
-    }
-
-    try {
-      setIsJoining(true);
-      const result = await api.rooms.join(token, joinCode.trim());
-      setJoinCode("");
-      navigate(`/app/rooms/${result.roomId}`);
-    } catch (joinRoomError) {
-      setJoinError(joinRoomError.message);
-    } finally {
-      setIsJoining(false);
-    }
-  }
-
   async function handleInvitationAction(invitationId, action) {
     try {
-      setInvitationError("");
-      setInvitationMessage("");
+      setError("");
+      setMessage("");
       setActiveInvitationId(invitationId);
       const response =
         action === "accept"
           ? await api.rooms.acceptInvitation(token, invitationId)
           : await api.rooms.rejectInvitation(token, invitationId);
 
-      setInvitationMessage(response.message);
+      setMessage(response.message);
       const invitations = await api.rooms.listInvitations(token);
       setRoomInvitations(invitations);
 
       if (action === "accept" && response.roomId) {
         navigate(`/app/rooms/${response.roomId}`);
       }
-    } catch (actionError) {
-      setInvitationError(actionError.message);
+    } catch (invitationError) {
+      setError(invitationError.message);
     } finally {
       setActiveInvitationId("");
     }
   }
 
-  if (user?.role === "photographer") {
-    return <PhotographerDashboardPage />;
-  }
-
   if (isLoading) {
-    return <div className="page-state">Loading your home page...</div>;
+    return <div className="page-state">Loading dashboard...</div>;
   }
 
-  const pendingInvites = roomInvitations.pendingReceived || [];
+  const stats = dashboard.stats || [];
   const latestRooms = dashboard.latestRooms || [];
+  const pendingReceived = roomInvitations.pendingReceived || [];
+  const pendingSent = roomInvitations.pendingSent || [];
+  const latestRoom = latestRooms[0]?.name || "No room created yet";
+  const latestInvitation = pendingSent[0]?.invitee?.name
+    ? `${pendingSent[0].invitee.name} invited to ${pendingSent[0].room?.title || "a room"}`
+    : "No invitation sent yet";
+  const latestPhoto = getLatestPhotoLabel(rawRooms);
+  const totalRooms = stats.find((item) => item.key === "rooms")?.value ?? 0;
+  const photosUploaded = stats.find((item) => item.key === "uploads")?.value ?? 0;
+  const pendingInvitations = pendingReceived.length + pendingSent.length;
+  const photographersJoined = countAcceptedPhotographers(roomInvitations);
 
   return (
-    <div className="space-y-6 lg:space-y-8">
-      <section className="overflow-hidden rounded-[36px] border border-white/80 bg-[linear-gradient(135deg,#fffaf5_0%,#ffffff_40%,#f3fbff_100%)] p-6 shadow-[0_24px_60px_rgba(15,23,42,0.06)] sm:p-8">
-        <div className="grid gap-8 xl:grid-cols-[1.15fr_0.85fr]">
-          <div>
-            <span className="inline-flex rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-orange-700">
-              Start in 3 steps
+    <div className="space-y-6 lg:space-y-7">
+      <section className="rounded-[32px] border border-white/80 bg-[linear-gradient(135deg,#fffaf5_0%,#ffffff_46%,#f4fbff_100%)] p-6 shadow-[0_22px_55px_rgba(15,23,42,0.06)] sm:p-8">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+          <div className="max-w-3xl">
+            <span className="inline-flex rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-700">
+              PixRoom+ workspace
             </span>
-            <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950 sm:text-[2.8rem]">
-              Create a room, invite your people, and share every photo in one place.
+            <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950 sm:text-[2.6rem]">
+              Welcome, {appUser.firstName}
             </h2>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
-              PixRoom+ is made for one simple journey: start a room for your event, invite guests,
-              add a photographer if you need one, and keep behind-the-scenes and final photos together.
+            <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
+              Create a room, invite guests, add a photographer, then upload and download photos.
             </p>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link className="app-btn-primary inline-flex h-12 items-center justify-center gap-2 px-5 text-sm" to="/app/rooms/new">
-                <Camera className="h-4 w-4" />
-                Create your room
-              </Link>
-              <Link className="app-btn-secondary inline-flex h-12 items-center justify-center gap-2 px-5 text-sm" to="/app/rooms">
-                <ImagePlus className="h-4 w-4" />
-                View my rooms
-              </Link>
-            </div>
           </div>
 
-          <div className="rounded-[30px] border border-white/80 bg-white/86 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.05)]">
-            <p className="text-sm font-semibold text-slate-900">What you can do now</p>
-            <div className="mt-5 grid gap-3">
-              <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
-                <span className="text-sm text-slate-600">My rooms</span>
-                <strong className="text-slate-950">{dashboard.stats[0]?.value}</strong>
-              </div>
-              <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
-                <span className="text-sm text-slate-600">Pending invites</span>
-                <strong className="text-slate-950">{pendingInvites.length}</strong>
-              </div>
-              <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
-                <span className="text-sm text-slate-600">Photos shared</span>
-                <strong className="text-slate-950">{dashboard.stats[1]?.value}</strong>
-              </div>
-            </div>
-
-            {dataMode === "mock" ? (
-              <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                You are seeing sample activity right now.
-              </div>
-            ) : null}
+          <div className="flex flex-wrap gap-3">
+            <Link className="app-btn-primary h-12 px-5 text-sm" to="/app/rooms/new">
+              <Camera className="h-4 w-4" />
+              Create Room
+            </Link>
+            <Link className="app-btn-secondary h-12 px-5 text-sm" to="/app/assistant">
+              <Bot className="h-4 w-4" />
+              Ask AI
+            </Link>
           </div>
         </div>
+
+        {dataMode === "mock" ? (
+          <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Live dashboard data is unavailable, so sample workspace data is shown.
+          </div>
+        ) : null}
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <StepCard
-          number="1"
-          title="Create your room"
-          description="Pick a room name, choose the event type, and decide if it should be public or private."
-        />
-        <StepCard
-          number="2"
-          title="Invite your people"
-          description="Invite friends directly, or share the room code if that is easier."
-        />
-        <StepCard
-          number="3"
-          title="Share your photos"
-          description="Guests can add behind-the-scenes photos, and your photographer can upload the final gallery."
-        />
-      </section>
-
-      {(invitationMessage || invitationError) && (
-        <div className="space-y-3">
-          {invitationMessage ? (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-              {invitationMessage}
-            </div>
-          ) : null}
-          {invitationError ? (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-              {invitationError}
-            </div>
-          ) : null}
-        </div>
-      )}
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <ActionCard
-          title="Create a room"
-          description="Start a room for a wedding, birthday, trip, or any event."
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <QuickAction
+          description="Start an event gallery."
           icon={Camera}
+          label="Create a Room"
           to="/app/rooms/new"
         />
-        <ActionCard
-          title="Join a room"
-          description="Use a code from a friend and go straight into the room."
+        <QuickAction
+          description="Prepare guests for room invites."
           icon={Users}
-          to="/app/dashboard#join-room"
-        />
-        <ActionCard
-          title="Invite friends"
-          description="Build your friend list now so room invites take one tap later."
-          icon={UserPlus}
+          label="Invite Friends"
           to="/app/friends"
         />
-        <ActionCard
-          title="Find a photographer"
-          description="Browse simple photographer cards and save the ones you like."
-          icon={Search}
+        <QuickAction
+          description="Find help for your event."
+          icon={MailPlus}
+          label="Invite Photographer"
           to="/app/photographers"
         />
-        <ActionCard
-          title="View my rooms"
-          description="Open a room to upload photos, invite more people, or see the gallery."
-          icon={ImagePlus}
-          to="/app/rooms"
-        />
-        <ActionCard
-          title="Upload photos"
-          description="Open any room and add behind-the-scenes moments right away."
-          icon={UploadCloud}
-          to="/app/rooms"
+        <QuickAction
+          description="Browse available photographers."
+          icon={UserRoundPlus}
+          label="View Photographers"
+          to="/app/photographers"
         />
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <section
-          className="rounded-[32px] border border-white/80 bg-white/88 p-6 shadow-[0_22px_55px_rgba(15,23,42,0.06)]"
-          id="join-room"
-        >
-          <div className="flex items-start justify-between gap-4">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <TrackingCard icon={Images} label="Total Rooms" value={totalRooms} />
+        <TrackingCard icon={ImageUp} label="Photos Uploaded" value={photosUploaded} />
+        <TrackingCard icon={MailPlus} label="Pending Invitations" value={pendingInvitations} />
+        <TrackingCard icon={UserRoundPlus} label="Photographers Joined" value={photographersJoined} />
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
+        <section className="rounded-[28px] border border-white/80 bg-white/90 p-6 shadow-[0_18px_45px_rgba(15,23,42,0.05)]">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h3 className="text-xl font-semibold text-slate-950">Join a room</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                If someone already invited you, just enter the room code here.
-              </p>
+              <h3 className="text-xl font-semibold text-slate-950">Recent activity</h3>
+              <p className="mt-1 text-sm text-slate-500">Track the work that matters.</p>
             </div>
-            <div className="rounded-2xl bg-slate-100 p-3 text-slate-700">
-              <ArrowRight className="h-5 w-5" />
-            </div>
+            <Link className="text-sm font-semibold text-orange-700 transition hover:text-orange-800" to="/app/rooms">
+              View my rooms
+            </Link>
           </div>
 
-          <form className="mt-6 space-y-4" onSubmit={handleJoinRoom}>
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium text-slate-700">Room code</span>
-              <input
-                className="app-field w-full"
-                onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
-                placeholder="ROOM-8342"
-                value={joinCode}
-              />
-            </label>
-
-            {joinError ? (
-              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                {joinError}
-              </div>
-            ) : null}
-
-            <button className="app-btn-primary inline-flex h-12 w-full items-center justify-center px-5 text-sm disabled:cursor-not-allowed disabled:opacity-60" disabled={isJoining} type="submit">
-              {isJoining ? "Joining..." : "Join this room"}
-            </button>
-          </form>
+          <div className="mt-5 grid gap-3">
+            <ActivityItem label="Latest room created" value={latestRoom} />
+            <ActivityItem label="Latest invitation sent" value={latestInvitation} />
+            <ActivityItem label="Latest photo uploaded" value={latestPhoto} />
+          </div>
         </section>
 
-        <section className="rounded-[32px] border border-white/80 bg-white/88 p-6 shadow-[0_22px_55px_rgba(15,23,42,0.06)]">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-emerald-50 p-3 text-emerald-700">
-              <CheckCircle2 className="h-5 w-5" />
-            </div>
+        <section
+          className="rounded-[28px] border border-white/80 bg-white/90 p-6 shadow-[0_18px_45px_rgba(15,23,42,0.05)]"
+          id="invitations"
+        >
+          <div className="flex items-center justify-between gap-4">
             <div>
-              <h3 className="text-xl font-semibold text-slate-950">Pending invitations</h3>
-              <p className="text-sm text-slate-500">Accept a room invite and start sharing photos.</p>
+              <h3 className="text-xl font-semibold text-slate-950">Invitations</h3>
+              <p className="mt-1 text-sm text-slate-500">Accept or reject room invites.</p>
             </div>
+            <StatusBadge label={`${pendingReceived.length} pending`} status="pending" />
           </div>
 
+          {(message || error) ? (
+            <div className="mt-4 space-y-3">
+              {message ? (
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                  {message}
+                </div>
+              ) : null}
+              {error ? (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {error}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="mt-5 space-y-3">
-            {pendingInvites.length ? (
-              pendingInvites.map((invitation) => (
+            {pendingReceived.length ? (
+              pendingReceived.slice(0, 4).map((invitation) => (
                 <article
+                  className="rounded-[22px] border border-slate-200 bg-slate-50/80 px-4 py-4"
                   key={invitation.id}
-                  className="rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-semibold text-slate-950">{invitation.room?.title}</p>
                       <p className="mt-1 text-sm text-slate-500">
-                        Invited by {invitation.inviter?.name || "a friend"}
+                        From {invitation.inviter?.name || "Organizer"}
                       </p>
                     </div>
                     <StatusBadge status={invitation.status} />
                   </div>
-
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <button className="app-btn-primary inline-flex h-10 items-center justify-center px-4 text-sm disabled:cursor-not-allowed disabled:opacity-60" disabled={activeInvitationId === invitation.id} onClick={() => handleInvitationAction(invitation.id, "accept")} type="button">
+                    <button
+                      className="app-btn-primary min-h-10 px-4 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                      disabled={activeInvitationId === invitation.id}
+                      onClick={() => handleInvitationAction(invitation.id, "accept")}
+                      type="button"
+                    >
                       {activeInvitationId === invitation.id ? "Working..." : "Accept"}
                     </button>
-                    <button className="app-btn-secondary inline-flex h-10 items-center justify-center px-4 text-sm disabled:cursor-not-allowed disabled:opacity-60" disabled={activeInvitationId === invitation.id} onClick={() => handleInvitationAction(invitation.id, "reject")} type="button">
-                      Not now
+                    <button
+                      className="app-btn-secondary min-h-10 px-4 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                      disabled={activeInvitationId === invitation.id}
+                      onClick={() => handleInvitationAction(invitation.id, "reject")}
+                      type="button"
+                    >
+                      Reject
                     </button>
                   </div>
                 </article>
               ))
             ) : (
-              <div className="rounded-[24px] border border-dashed border-slate-200 bg-slate-50/90 px-5 py-8 text-center">
-                <h4 className="text-lg font-semibold text-slate-950">No room invites yet</h4>
-                <p className="mt-2 text-sm leading-6 text-slate-500">
-                  When someone invites you to a room, it will show up here.
-                </p>
+              <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-50/80 px-4 py-8 text-center">
+                <p className="font-semibold text-slate-950">No pending invitations</p>
+                <p className="mt-2 text-sm text-slate-500">New room invites will appear here.</p>
               </div>
             )}
           </div>
         </section>
       </section>
 
-      <section className="rounded-[32px] border border-white/80 bg-white/88 p-6 shadow-[0_22px_55px_rgba(15,23,42,0.06)]">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <section className="rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,#fff8f1_0%,#ffffff_100%)] p-6 shadow-[0_18px_45px_rgba(15,23,42,0.05)]">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="text-2xl font-semibold tracking-tight text-slate-950">My rooms</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              Open a room to invite people, upload photos, or choose a photographer.
+            <h3 className="text-xl font-semibold text-slate-950">Main workflow</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Create your room, invite guests, add a photographer, then share and download photos.
             </p>
           </div>
-          <Link className="text-sm font-semibold text-slate-700 transition hover:text-slate-950" to="/app/rooms">
-            See all rooms
-          </Link>
-        </div>
-
-        <div className="mt-6 grid gap-4 lg:grid-cols-3">
-          {latestRooms.length ? (
-            latestRooms.map((room) => (
-              <article
-                key={room.id}
-                className="rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f7fbff_100%)] p-5"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                      {room.type}
-                    </span>
-                    <h4 className="mt-4 text-lg font-semibold text-slate-950">{room.name}</h4>
-                  </div>
-                  <StatusBadge status={room.status === "Private" ? "private" : "accepted"} label={room.status} />
-                </div>
-
-                <div className="mt-5 grid grid-cols-2 gap-3">
-                  <div className="rounded-2xl bg-slate-50 px-3 py-3">
-                    <p className="text-xs uppercase tracking-[0.14em] text-slate-400">People</p>
-                    <p className="mt-1 font-semibold text-slate-950">{room.participants}</p>
-                  </div>
-                  <div className="rounded-2xl bg-slate-50 px-3 py-3">
-                    <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Photos</p>
-                    <p className="mt-1 font-semibold text-slate-950">{room.uploads}</p>
-                  </div>
-                </div>
-
-                <div className="mt-5 flex items-center justify-between">
-                  <span className="text-sm text-slate-500">{room.updatedAt}</span>
-                  <Link
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-slate-900 transition hover:text-orange-700"
-                    to={room.href}
-                  >
-                    Open room
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </div>
-              </article>
-            ))
-          ) : (
-            <div className="rounded-[28px] border border-dashed border-slate-200 bg-slate-50/90 px-6 py-10 text-center lg:col-span-3">
-              <h4 className="text-lg font-semibold text-slate-950">No rooms yet</h4>
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                Create your first room and invite your friends in less than one minute.
-              </p>
-              <Link className="app-btn-primary mt-5 inline-flex h-11 items-center justify-center px-4 text-sm" to="/app/rooms/new">
-                Create your first room
-              </Link>
-            </div>
-          )}
+          <div className="flex flex-wrap gap-3">
+            <Link className="app-btn-ghost h-11 px-4 text-sm" to="/app/rooms">
+              <Images className="h-4 w-4" />
+              My Rooms
+            </Link>
+            <Link className="app-btn-ghost h-11 px-4 text-sm" to="/app/rooms">
+              <Download className="h-4 w-4" />
+              Photos
+            </Link>
+          </div>
         </div>
       </section>
     </div>

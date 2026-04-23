@@ -47,6 +47,7 @@ function serializeRoomInvitation(invitation, currentUserId) {
     status: invitation.status,
     createdAt: invitation.createdAt,
     updatedAt: invitation.updatedAt,
+    respondedAt: invitation.respondedAt,
     room: invitation.room
       ? {
           id: invitation.room._id,
@@ -60,6 +61,7 @@ function serializeRoomInvitation(invitation, currentUserId) {
           id: invitation.inviter._id,
           name: invitation.inviter.name,
           email: invitation.inviter.email,
+          role: invitation.inviter.role,
         }
       : null,
     invitee: invitation.invitee
@@ -67,6 +69,7 @@ function serializeRoomInvitation(invitation, currentUserId) {
           id: invitation.invitee._id,
           name: invitation.invitee.name,
           email: invitation.invitee.email,
+          role: invitation.invitee.role,
         }
       : null,
     direction: isInvitee ? "received" : "sent",
@@ -153,6 +156,23 @@ async function ensureRoomManagementAccess(roomId, user) {
 
   if (ownerId !== userId && !adminIds.includes(userId)) {
     throw new AppError("Only room owners or admins can invite friends.", 403);
+  }
+
+  return room;
+}
+
+async function ensureRoomOwnerAccess(roomId, user) {
+  const room = await Room.findById(roomId)
+    .populate("owner", "name email role")
+    .populate("admins", "name email role")
+    .populate("members", "name email role");
+
+  if (!room) {
+    throw new AppError("Room not found.", 404);
+  }
+
+  if (room.owner._id.toString() !== user._id.toString()) {
+    throw new AppError("You are not allowed to do this action", 403);
   }
 
   return room;
@@ -492,6 +512,7 @@ export const inviteFriendToRoom = asyncHandler(async (req, res) => {
   } else {
     invitation.inviter = req.user._id;
     invitation.status = "pending";
+    invitation.respondedAt = null;
   }
 
   await invitation.save();
@@ -512,8 +533,8 @@ export const getMyRoomInvitations = asyncHandler(async (req, res) => {
     $or: [{ invitee: req.user._id }, { inviter: req.user._id }],
   })
     .populate("room", "title visibility code")
-    .populate("inviter", "name email")
-    .populate("invitee", "name email")
+    .populate("inviter", "name email role")
+    .populate("invitee", "name email role")
     .sort({ updatedAt: -1 });
 
   const serialized = invitations.map((invitation) =>
@@ -535,8 +556,8 @@ export const getRoomInvitations = asyncHandler(async (req, res) => {
   const room = await ensureRoomManagementAccess(req.params.roomId, req.user);
   const invitations = await RoomInvitation.find({ room: room._id })
     .populate("room", "title visibility code")
-    .populate("inviter", "name email")
-    .populate("invitee", "name email")
+    .populate("inviter", "name email role")
+    .populate("invitee", "name email role")
     .sort({ updatedAt: -1 });
 
   res.json({
@@ -549,8 +570,8 @@ export const getRoomInvitations = asyncHandler(async (req, res) => {
 export const acceptRoomInvitation = asyncHandler(async (req, res) => {
   const invitation = await RoomInvitation.findById(req.params.invitationId).populate([
     { path: "room", select: "title visibility code owner admins members" },
-    { path: "inviter", select: "name email" },
-    { path: "invitee", select: "name email" },
+    { path: "inviter", select: "name email role" },
+    { path: "invitee", select: "name email role" },
   ]);
 
   if (!invitation) {
@@ -558,14 +579,15 @@ export const acceptRoomInvitation = asyncHandler(async (req, res) => {
   }
 
   if (invitation.invitee._id.toString() !== req.user._id.toString()) {
-    throw new AppError("Only the invited user can accept this invitation.", 403);
+    throw new AppError("You are not allowed to do this action", 403);
   }
 
   if (invitation.status !== "pending") {
-    throw new AppError("Only pending room invitations can be accepted.", 400);
+    throw new AppError("This invitation has already been handled.", 400);
   }
 
   invitation.status = "accepted";
+  invitation.respondedAt = new Date();
   await invitation.save();
 
   const room = await Room.findById(invitation.room._id);
@@ -580,7 +602,7 @@ export const acceptRoomInvitation = asyncHandler(async (req, res) => {
   }
 
   res.json({
-    message: "Room invitation accepted.",
+    message: "Invitation accepted",
     invitation: serializeRoomInvitation(invitation, req.user._id.toString()),
     roomId: room._id,
   });
@@ -589,8 +611,8 @@ export const acceptRoomInvitation = asyncHandler(async (req, res) => {
 export const rejectRoomInvitation = asyncHandler(async (req, res) => {
   const invitation = await RoomInvitation.findById(req.params.invitationId).populate([
     { path: "room", select: "title visibility code" },
-    { path: "inviter", select: "name email" },
-    { path: "invitee", select: "name email" },
+    { path: "inviter", select: "name email role" },
+    { path: "invitee", select: "name email role" },
   ]);
 
   if (!invitation) {
@@ -598,18 +620,99 @@ export const rejectRoomInvitation = asyncHandler(async (req, res) => {
   }
 
   if (invitation.invitee._id.toString() !== req.user._id.toString()) {
-    throw new AppError("Only the invited user can reject this invitation.", 403);
+    throw new AppError("You are not allowed to do this action", 403);
   }
 
   if (invitation.status !== "pending") {
-    throw new AppError("Only pending room invitations can be rejected.", 400);
+    throw new AppError("This invitation has already been handled.", 400);
   }
 
   invitation.status = "rejected";
+  invitation.respondedAt = new Date();
   await invitation.save();
 
   res.json({
-    message: "Room invitation rejected.",
+    message: "Invitation rejected",
     invitation: serializeRoomInvitation(invitation, req.user._id.toString()),
+  });
+});
+
+export const invitePhotographerToRoom = asyncHandler(async (req, res) => {
+  const { photographerId } = req.body;
+
+  if (!photographerId) {
+    throw new AppError("Select a photographer to invite.");
+  }
+
+  const room = await ensureRoomOwnerAccess(req.params.roomId, req.user);
+  const photographer = await User.findOne({ _id: photographerId, role: "photographer" });
+
+  if (!photographer) {
+    throw new AppError("Photographer not found.", 404);
+  }
+
+  const photographerIdString = photographer._id.toString();
+  const ownerId = room.owner._id.toString();
+  const adminIds = room.admins.map((admin) => admin._id.toString());
+  const memberIds = room.members.map((member) => member._id.toString());
+
+  if ([ownerId, ...adminIds, ...memberIds].includes(photographerIdString)) {
+    throw new AppError("This photographer already has access to the room.", 409);
+  }
+
+  let invitation = await RoomInvitation.findOne({
+    room: room._id,
+    invitee: photographer._id,
+  });
+
+  if (invitation?.status === "pending") {
+    throw new AppError("Invitation already exists", 409);
+  }
+
+  if (invitation?.status === "accepted") {
+    throw new AppError("This photographer has already accepted the invitation.", 409);
+  }
+
+  if (!invitation) {
+    invitation = new RoomInvitation({
+      room: room._id,
+      inviter: req.user._id,
+      invitee: photographer._id,
+      status: "pending",
+    });
+  } else {
+    invitation.inviter = req.user._id;
+    invitation.status = "pending";
+    invitation.respondedAt = null;
+  }
+
+  await invitation.save();
+  await invitation.populate([
+    { path: "room", select: "title visibility code" },
+    { path: "inviter", select: "name email role" },
+    { path: "invitee", select: "name email role" },
+  ]);
+
+  res.status(201).json({
+    message: "Invitation sent successfully",
+    invitation: serializeRoomInvitation(invitation, req.user._id.toString()),
+  });
+});
+
+export const getPhotographerInvitations = asyncHandler(async (req, res) => {
+  if (req.user.role !== "photographer") {
+    throw new AppError("You are not allowed to do this action", 403);
+  }
+
+  const invitations = await RoomInvitation.find({ invitee: req.user._id })
+    .populate("room", "title visibility code eventDate")
+    .populate("inviter", "name email role")
+    .populate("invitee", "name email role")
+    .sort({ updatedAt: -1 });
+
+  res.json({
+    invitations: invitations.map((invitation) =>
+      serializeRoomInvitation(invitation, req.user._id.toString()),
+    ),
   });
 });
